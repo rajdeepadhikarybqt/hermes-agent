@@ -19,7 +19,61 @@
 use std::path::{Path, PathBuf};
 #[cfg(target_os = "macos")]
 use std::process::Command;
+#[cfg(target_os = "windows")]
+use std::os::windows::ffi::OsStrExt;
 use tracing_appender::non_blocking::WorkerGuard;
+
+#[cfg(target_os = "windows")]
+fn to_long_path(path: &Path) -> PathBuf {
+    // Convert 8.3 short paths (e.g., C:\Users\RAJDE~1.LAPX\...) to long paths
+    // using GetLongPathNameW. This prevents canonicalize() failures on
+    // Windows when the current exe path contains 8.3 components.
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    
+    let path_str = path.to_string_lossy();
+    let wide: Vec<u16> = OsStr::new(&path_str).encode_wide().chain(Some(0)).collect();
+    
+    // First call to get required buffer size
+    let mut buffer: Vec<u16> = vec![0; 260]; // MAX_PATH
+    let result = unsafe {
+        windows_sys::Win32::Storage::FileSystem::GetLongPathNameW(
+            wide.as_ptr(),
+            buffer.as_mut_ptr(),
+            buffer.len() as u32,
+        )
+    };
+    
+    if result == 0 {
+        // API failed — fall back to original path
+        return path.to_path_buf();
+    }
+    
+    let len = result as usize;
+    if len > buffer.len() {
+        // Buffer too small — resize and retry (rare)
+        buffer.resize(len, 0);
+        let result = unsafe {
+            windows_sys::Win32::Storage::FileSystem::GetLongPathNameW(
+                wide.as_ptr(),
+                buffer.as_mut_ptr(),
+                buffer.len() as u32,
+            )
+        };
+        if result == 0 {
+            return path.to_path_buf();
+        }
+    }
+    
+    // Convert back to String
+    let long_path = String::from_utf16_lossy(&buffer[..len]);
+    PathBuf::from(long_path)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn to_long_path(path: &Path) -> PathBuf {
+    path.to_path_buf()
+}
 
 /// Returns the canonical Hermes home directory, respecting $HERMES_HOME if set.
 pub fn hermes_home() -> PathBuf {
@@ -92,7 +146,9 @@ pub fn copy_self_to_hermes_home() -> std::io::Result<()> {
     // Skip if we're already running from the destination (update re-invocation
     // or a prior copy). canonicalize both so symlinks / 8.3 short paths / case
     // differences don't trick us into a self-copy.
-    let same = match (src.canonicalize(), dest.canonicalize()) {
+    let src_long = to_long_path(&src);
+    let dest_long = to_long_path(&dest);
+    let same = match (src_long.canonicalize(), dest_long.canonicalize()) {
         (Ok(a), Ok(b)) => a == b,
         _ => src == dest,
     };
