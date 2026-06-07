@@ -319,7 +319,7 @@ function Install-AgentBrowser {
 # ============================================================================
 
 function Install-Uv {
-    # Hermes owns its own uv at $HermesHome\bin\uv.exe.  Always install there —
+    # Hermes owns its own uv at $HermesHome\bin\uv.exe.  Always install there  - 
     # no PATH probing, no conda guards, no multi-location resolution chains.
     # The runtime update path (hermes_cli/managed_uv.py) looks in the same
     # place, so install.ps1 and `hermes update` stay in sync.
@@ -380,7 +380,7 @@ function Sync-EnvPath {
 # prior process is not visible here.  Later stages (Test-Python,
 # Install-Venv, Install-Dependencies, Install-PlatformSdks) call this
 # at the top to populate $script:UvCmd from the managed location.
-# Throws if uv is not findable — the caller's stage then surfaces a
+# Throws if uv is not findable  -  the caller's stage then surfaces a
 # clean error via the stage-driver's try/catch.
 function Resolve-UvCmd {
     # Already resolved (default invocation path: Install-Uv ran earlier
@@ -396,7 +396,7 @@ function Resolve-UvCmd {
         # Stale; fall through to re-discover.
     }
 
-    # Check the managed location first — this is where Install-Uv puts it.
+    # Check the managed location first  -  this is where Install-Uv puts it.
     $managedUv = Join-Path $HermesHome "bin\uv.exe"
     if (Test-Path $managedUv) {
         $script:UvCmd = $managedUv
@@ -1634,7 +1634,7 @@ function Set-PathVariable {
 function Write-BootstrapMarker {
     # Writes $InstallDir\.hermes-bootstrap-complete which tells the Hermes
     # desktop app (apps/desktop/electron/main.cjs) "install.ps1 ran
-    # successfully — DON'T trigger the legacy first-launch bootstrap
+    # successfully  -  DON'T trigger the legacy first-launch bootstrap
     # runner."
     #
     # Schema mirrors what main.cjs's writeBootstrapMarker() / isBootstrap
@@ -1655,7 +1655,7 @@ function Write-BootstrapMarker {
     # Resolve the pinned commit: explicit -Commit wins, otherwise read
     # the checkout's HEAD via git. If git can't run, leave commit empty
     # and the marker will fail desktop validation (pinnedCommit.length
-    # >= 7) — better to be invalid than wrong.
+    # >= 7)  -  better to be invalid than wrong.
     $pinnedCommit = $Commit
     if (-not $pinnedCommit) {
         # PS 5.1 doesn't support the ?. null-conditional operator, so
@@ -1670,7 +1670,7 @@ function Write-BootstrapMarker {
                     $pinnedCommit = $resolved.Trim()
                 }
             } catch {
-                # Ignore — pinnedCommit stays empty, marker stays invalid,
+                # Ignore  -  pinnedCommit stays empty, marker stays invalid,
                 # desktop falls through to its legacy bootstrap path.
             } finally {
                 Pop-Location
@@ -1689,7 +1689,7 @@ function Write-BootstrapMarker {
         pinnedCommit  = $pinnedCommit
         pinnedBranch  = $pinnedBranch
         completedAt   = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-        # desktopVersion field intentionally omitted — only the desktop
+        # desktopVersion field intentionally omitted  -  only the desktop
         # app knows its own version, and the marker validator doesn't
         # require it. The desktop fills it in if/when it writes its
         # own marker (e.g. after a future in-app upgrade).
@@ -1698,7 +1698,7 @@ function Write-BootstrapMarker {
 
     # Write WITHOUT a UTF-8 BOM. PowerShell 5.1's `Set-Content -Encoding UTF8`
     # always emits a BOM, and Node's plain JSON.parse rejects the BOM as an
-    # unexpected character — so a BOM'd marker would silently fail the
+    # unexpected character  -  so a BOM'd marker would silently fail the
     # desktop's readJson(), make isBootstrapComplete() return null, and the
     # desktop would re-run the legacy bootstrap runner anyway. Defeats the
     # whole point. Use the .NET API directly for BOM-less UTF-8.
@@ -1809,7 +1809,7 @@ function Install-NodeDeps {
         # Cross-process driver mode (Hermes-Setup.exe runs each -Stage NAME
         # in a fresh powershell.exe) means $script:HasNode set by Stage-Node
         # in the previous process isn't visible here. Re-probe rather than
-        # trust the stale global — Stage-Node already ran successfully or
+        # trust the stale global  -  Stage-Node already ran successfully or
         # the bootstrap would've aborted, so npm is reachable.
         if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
             Write-Info "Skipping Node.js dependencies (Node not installed)"
@@ -2100,7 +2100,7 @@ function Install-Desktop {
     #
     # The Tauri bootstrap installer's launch_hermes_desktop command
     # resolves apps/desktop/release/win-unpacked/Hermes.exe directly,
-    # so an "unpacked" build (electron-builder --dir) is enough — we
+    # so an "unpacked" build (electron-builder --dir) is enough  -  we
     # don't need to produce an NSIS/MSI artifact here.
 
     # Always re-resolve Node here. Stages run in separate PowerShell processes,
@@ -2154,7 +2154,7 @@ function Install-Desktop {
         #
         # The streaming sink in bootstrap.rs's run_install_script
         # captures every stdout/stderr line as it's emitted, so we don't
-        # need a side TEMP log file — the installer's bootstrap log
+        # need a side TEMP log file  -  the installer's bootstrap log
         # IS the artifact a support engineer reads.
         #
         # Prefer `npm ci`: it wipes node_modules and reinstalls from the
@@ -2203,7 +2203,7 @@ function Install-Desktop {
     # NOT signing the output. Combined with signAndEditExecutable=false in
     # apps/desktop/package.json's build.win block, electron-builder never
     # invokes signtool and therefore never fetches/extracts winCodeSign
-    # (whose macOS symlinks crash 7-Zip on non-admin Windows — a dead end we
+    # (whose macOS symlinks crash 7-Zip on non-admin Windows  -  a dead end we
     # are NOT trying to work around). The Hermes icon + product name are
     # stamped onto Hermes.exe by our own rcedit step (Set-DesktopExeIdentity)
     # AFTER this build, completely decoupled from electron-builder signing.
@@ -2259,7 +2259,7 @@ function Install-Desktop {
         Pop-Location
         throw
     } finally {
-        # Restore env to whatever the caller had — don't leak our
+        # Restore env to whatever the caller had  -  don't leak our
         # signing-off override into anything install.ps1 invokes later
         # (Stage-PlatformSdks, etc.).
         $env:CSC_IDENTITY_AUTO_DISCOVERY = $prevCSCAuto
@@ -2271,7 +2271,7 @@ function Install-Desktop {
     # 3-4. Post-build: sanity-check + shortcuts. Wrapped in try/catch so
     #      non-critical path-resolution edge cases (dotted usernames, 8.3
     #      short names) never fail an otherwise-successful build. The build
-    #      step above already confirmed the app compiled — this is safety
+    #      step above already confirmed the app compiled  -  this is safety
     #      net + convenience.
     try {
         # 3. Sanity-check the produced binary. Probe both arches so this works
@@ -2296,7 +2296,7 @@ function Install-Desktop {
 
         # 3b. The Hermes icon + identity are stamped onto Hermes.exe by the
         #     electron-builder `afterPack` hook (apps/desktop/scripts/after-pack.cjs)
-        #     during `npm run pack` above — for every build, so the installer's
+        #     during `npm run pack` above  -  for every build, so the installer's
         #     --update rebuild stays branded too. No separate stamp step needed here.
         #     electron-builder's own rcedit step stays disabled (signAndEditExecutable
         #     =false) because enabling it drags in signtool -> winCodeSign -> the
@@ -2305,13 +2305,13 @@ function Install-Desktop {
         # 4. Create Start Menu + Desktop shortcuts pointing DIRECTLY at the packed
         #    Hermes.exe. We deliberately do NOT point them at `hermes desktop`: that
         #    command rebuilds (npm install + electron-builder) on every launch,
-        #    which would cost minutes each time. The packed exe is the consumer —
+        #    which would cost minutes each time. The packed exe is the consumer  - 
         #    launching it directly is instant, and updates flow through the
         #    installer's --update path (which rebuilds once, then relaunches).
         New-DesktopShortcuts -TargetExe $desktopExe
     } catch {
         Write-Warn "Desktop post-build verification failed (non-fatal): $_"
-        Write-Info "Hermes.exe was already built successfully — you can launch it from:"
+        Write-Info "Hermes.exe was already built successfully  -  you can launch it from:"
         Write-Info "  $desktopDir\release\win-unpacked\Hermes.exe"
     }
 }
@@ -2366,11 +2366,9 @@ function New-DesktopShortcuts {
         # cached bitmap. Critical on the --update path: the exe was re-stamped
         # with the Hermes icon, but without this the shortcut can keep drawing
         # the old Electron icon until the user manually refreshes / reboots.
-        # Best-effort and silent — never fail the install over a cosmetic cache.
-        try {
+        # Best-effort and silent  -  never fail the install over a cosmetic cache.
+        if (Get-Command ie4uinit.exe -ErrorAction SilentlyContinue) {
             & ie4uinit.exe -show 2>$null
-        } catch {
-            # ie4uinit may be absent/renamed on some SKUs — ignore.
         }
     } catch {
         Write-Warn "Skipping shortcut creation: $($_.Exception.Message)"
