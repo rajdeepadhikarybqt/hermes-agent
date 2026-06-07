@@ -57,7 +57,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: apps/bootstrap-installer
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build Tauri app (Hermes-Setup.exe)
         working-directory: apps/bootstrap-installer
