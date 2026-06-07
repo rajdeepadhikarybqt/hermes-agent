@@ -53,7 +53,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install tauri-cli
-        run: cargo install tauri-cli --version ^2
+        run: cargo install tauri-cli --version ^2 --force
 
       - name: Install frontend dependencies
         working-directory: apps/bootstrap-installer
