@@ -28,11 +28,9 @@ fn to_long_path(path: &Path) -> PathBuf {
     // Convert 8.3 short paths (e.g., C:\Users\RAJDE~1.LAPX\...) to long paths
     // using GetLongPathNameW. This prevents canonicalize() failures on
     // Windows when the current exe path contains 8.3 components.
-    use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     
-    let path_str = path.to_string_lossy();
-    let wide: Vec<u16> = OsStr::new(&path_str).encode_wide().chain(Some(0)).collect();
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
     
     // First call to get required buffer size
     let mut buffer: Vec<u16> = vec![0; 260]; // MAX_PATH
