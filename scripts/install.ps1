@@ -341,8 +341,13 @@ function Install-Uv {
     try {
         $ErrorActionPreference = "Continue"
         $env:UV_INSTALL_DIR = Join-Path $HermesHome "bin"
-        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex" 2>&1 | Out-Null
+        $uvOutput = powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex" 2>&1
         $ErrorActionPreference = $prevEAP
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Err "uv installer exited with code $LASTEXITCODE"
+            $uvOutput | ForEach-Object { Write-Warn "  $_" }
+        }
 
         if (Test-Path $managedUv) {
             $script:UvCmd = $managedUv
