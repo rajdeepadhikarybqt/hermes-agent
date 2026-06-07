@@ -2211,10 +2211,10 @@ function Install-Desktop {
         Write-Success "Desktop workspace dependencies installed"
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        try { if ($pushedLocation1) { Pop-Location } } catch {}
+        try { if ($pushedLocation1) { Pop-Location -ErrorAction Stop } } catch {}
         throw
     }
-    try { if ($pushedLocation1) { Pop-Location } } catch {
+    try { if ($pushedLocation1) { Pop-Location -ErrorAction Stop } } catch {
         Write-Warn "Pop-Location failed after npm install (non-fatal): $_"
     }
 
@@ -2287,7 +2287,7 @@ function Install-Desktop {
         Remove-Item -Force $buildLog -ErrorAction SilentlyContinue
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        try { if ($pushedLocation2) { Pop-Location } } catch {}
+        try { if ($pushedLocation2) { Pop-Location -ErrorAction Stop } } catch {}
         throw
     } finally {
         # Restore env to whatever the caller had  -  don't leak our
@@ -2297,7 +2297,7 @@ function Install-Desktop {
         $env:WIN_CSC_LINK = $prevWinCscLink
         $env:WIN_CSC_KEY_PASSWORD = $prevWinCscKeyPassword
     }
-    try { if ($pushedLocation2) { Pop-Location } } catch {
+    try { if ($pushedLocation2) { Pop-Location -ErrorAction Stop } } catch {
         Write-Warn "Pop-Location failed after desktop build (non-fatal): $_"
     }
 
