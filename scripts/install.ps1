@@ -2293,7 +2293,7 @@ function Install-Desktop {
         $env:WIN_CSC_LINK = $prevWinCscLink
         $env:WIN_CSC_KEY_PASSWORD = $prevWinCscKeyPassword
     }
-    Pop-Location -ErrorAction SilentlyContinue 2>$null
+    try { Pop-Location -ErrorAction Stop } catch {}
 
 }
 
