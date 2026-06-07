@@ -2284,6 +2284,7 @@ function Install-Desktop {
             throw "apps/desktop build failed (exit $code)"
         }
         Write-Success "Desktop app built"
+        Write-Warn "--- BUILD COMPLETE, entering post-build ---"
         Remove-Item -Force $buildLog -ErrorAction SilentlyContinue
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
@@ -2306,9 +2307,11 @@ function Install-Desktop {
     #      short names) never fail an otherwise-successful build. The build
     #      step above already confirmed the app compiled  -  this is safety
     #      net + convenience.
+    Write-Warn "--- POST-BUILD SECTION START ---"
     try {
         # 3. Sanity-check the produced binary. Probe both arches so this works
         # on x64 and arm64 build machines.
+        Write-Warn "--- TEST-PATH for Hermes.exe ---"
         $exeCandidates = @(
             "$desktopDir\release\win-unpacked\Hermes.exe",
             "$desktopDir\release\win-arm64-unpacked\Hermes.exe"
