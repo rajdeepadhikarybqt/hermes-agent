@@ -2211,10 +2211,12 @@ function Install-Desktop {
         Write-Success "Desktop workspace dependencies installed"
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        if ($pushedLocation1) { Pop-Location }
+        try { if ($pushedLocation1) { Pop-Location } } catch {}
         throw
     }
-    if ($pushedLocation1) { Pop-Location }
+    try { if ($pushedLocation1) { Pop-Location } } catch {
+        Write-Warn "Pop-Location failed after npm install (non-fatal): $_"
+    }
 
     # 2. Build apps/desktop. `npm run pack` runs:
     #      assert-root-install + write-build-stamp + stage-native-deps +
@@ -2285,7 +2287,7 @@ function Install-Desktop {
         Remove-Item -Force $buildLog -ErrorAction SilentlyContinue
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        if ($pushedLocation2) { Pop-Location }
+        try { if ($pushedLocation2) { Pop-Location } } catch {}
         throw
     } finally {
         # Restore env to whatever the caller had  -  don't leak our
@@ -2295,7 +2297,9 @@ function Install-Desktop {
         $env:WIN_CSC_LINK = $prevWinCscLink
         $env:WIN_CSC_KEY_PASSWORD = $prevWinCscKeyPassword
     }
-    if ($pushedLocation2) { Pop-Location }
+    try { if ($pushedLocation2) { Pop-Location } } catch {
+        Write-Warn "Pop-Location failed after desktop build (non-fatal): $_"
+    }
 
     # 3-4. Post-build: sanity-check + shortcuts. Wrapped in try/catch so
     #      non-critical path-resolution edge cases (dotted usernames, 8.3
