@@ -2162,7 +2162,11 @@ function Install-Desktop {
     # but at the root rather than the browser-tools workspace, so all
     # apps/* workspaces resolve.
     Write-Info "Installing desktop workspace dependencies (this includes Electron ~150MB, takes 1-3min)..."
-    Push-Location $InstallDir
+    # Push-Location can fail on 8.3 paths (dotted Windows usernames).
+    $pushedLocation1 = $false
+    try { Push-Location $InstallDir -ErrorAction Stop; $pushedLocation1 = $true } catch {
+        Write-Warn "Push-Location failed for $InstallDir (non-fatal) - continuing: $_"
+    }
     $prevEAP = $ErrorActionPreference
     try {
         $ErrorActionPreference = "Continue"
@@ -2207,10 +2211,10 @@ function Install-Desktop {
         Write-Success "Desktop workspace dependencies installed"
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        Pop-Location
+        if ($pushedLocation1) { Pop-Location }
         throw
     }
-    Pop-Location
+    if ($pushedLocation1) { Pop-Location }
 
     # 2. Build apps/desktop. `npm run pack` runs:
     #      assert-root-install + write-build-stamp + stage-native-deps +
@@ -2234,7 +2238,11 @@ function Install-Desktop {
     # for some other tool, electron-builder would still try to sign.
     Write-Info "Building desktop app (this takes 1-3 minutes)..."
     $buildLog = "$env:TEMP\hermes-desktop-build-$(Get-Random).log"
-    Push-Location $desktopDir
+    # Push-Location can fail on 8.3 paths (dotted Windows usernames).
+    $pushedLocation2 = $false
+    try { Push-Location $desktopDir -ErrorAction Stop; $pushedLocation2 = $true } catch {
+        Write-Warn "Push-Location failed for $desktopDir (non-fatal) - continuing: $_"
+    }
     $prevEAP = $ErrorActionPreference
     $prevCSCAuto = $env:CSC_IDENTITY_AUTO_DISCOVERY
     $prevWinCscLink = $env:WIN_CSC_LINK
@@ -2277,7 +2285,7 @@ function Install-Desktop {
         Remove-Item -Force $buildLog -ErrorAction SilentlyContinue
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        Pop-Location
+        if ($pushedLocation2) { Pop-Location }
         throw
     } finally {
         # Restore env to whatever the caller had  -  don't leak our
@@ -2287,7 +2295,7 @@ function Install-Desktop {
         $env:WIN_CSC_LINK = $prevWinCscLink
         $env:WIN_CSC_KEY_PASSWORD = $prevWinCscKeyPassword
     }
-    Pop-Location
+    if ($pushedLocation2) { Pop-Location }
 
     # 3-4. Post-build: sanity-check + shortcuts. Wrapped in try/catch so
     #      non-critical path-resolution edge cases (dotted usernames, 8.3
