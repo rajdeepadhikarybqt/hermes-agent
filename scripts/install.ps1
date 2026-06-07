@@ -340,14 +340,30 @@ function Install-Uv {
     $prevEAP = $ErrorActionPreference
     try {
         $ErrorActionPreference = "Continue"
-        $env:UV_INSTALL_DIR = Join-Path $HermesHome "bin"
-        $uvOutput = powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex" 2>&1
-        $ErrorActionPreference = $prevEAP
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Err "uv installer exited with code $LASTEXITCODE"
-            $uvOutput | ForEach-Object { Write-Warn "  $_" }
+        # Download uv.exe directly from GitHub releases instead of using the
+        # astral.sh installer script. The installer script calls
+        # Get-ExecutionPolicy which requires Microsoft.PowerShell.Security,
+        # and that module fails to load on some Windows configurations
+        # (especially dotted usernames). A direct download avoids this.
+        $uvUrl = "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip"
+        $uvZip = Join-Path $HermesHome "bin\uv.zip"
+        try {
+            Invoke-WebRequest -Uri $uvUrl -OutFile $uvZip -UseBasicParsing -ErrorAction Stop
+            Expand-Archive -Path $uvZip -DestinationPath (Join-Path $HermesHome "bin") -Force -ErrorAction Stop
+            Remove-Item $uvZip -Force -ErrorAction SilentlyContinue
+            # uv.exe is inside a subfolder in the zip; move it to bin
+            $uvExtracted = Join-Path $HermesHome "bin\uv-x86_64-pc-windows-msvc\uv.exe"
+            if (Test-Path $uvExtracted) {
+                Move-Item -Path $uvExtracted -Destination $managedUv -Force -ErrorAction Stop
+                Remove-Item (Join-Path $HermesHome "bin\uv-x86_64-pc-windows-msvc") -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        } catch {
+            Write-Warn "Direct download failed: $_"
+            Write-Info "Falling back to astral installer..."
+            $env:UV_INSTALL_DIR = Join-Path $HermesHome "bin"
+            $null = powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex" 2>&1
         }
+        $ErrorActionPreference = $prevEAP
 
         if (Test-Path $managedUv) {
             $script:UvCmd = $managedUv
