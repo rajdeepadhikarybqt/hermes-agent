@@ -2283,73 +2283,18 @@ function Install-Desktop {
             }
             throw "apps/desktop build failed (exit $code)"
         }
-        Write-Success "Desktop app built"
-        Write-Warn "--- BUILD COMPLETE, entering post-build ---"
+                Write-Success "Desktop app built"
         Remove-Item -Force $buildLog -ErrorAction SilentlyContinue
     } catch {
         if ($prevEAP) { $ErrorActionPreference = $prevEAP }
-        try { if ($pushedLocation2) { Pop-Location -ErrorAction Stop } } catch {}
         throw
     } finally {
-        # Restore env to whatever the caller had  -  don't leak our
-        # signing-off override into anything install.ps1 invokes later
-        # (Stage-PlatformSdks, etc.).
         $env:CSC_IDENTITY_AUTO_DISCOVERY = $prevCSCAuto
         $env:WIN_CSC_LINK = $prevWinCscLink
         $env:WIN_CSC_KEY_PASSWORD = $prevWinCscKeyPassword
     }
-    try { if ($pushedLocation2) { Pop-Location -ErrorAction Stop } } catch {
-        Write-Warn "Pop-Location failed after desktop build (non-fatal): $_"
-    }
+    Pop-Location -ErrorAction SilentlyContinue 2>$null
 
-    # 3-4. Post-build: sanity-check + shortcuts. Wrapped in try/catch so
-    #      non-critical path-resolution edge cases (dotted usernames, 8.3
-    #      short names) never fail an otherwise-successful build. The build
-    #      step above already confirmed the app compiled  -  this is safety
-    #      net + convenience.
-    Write-Warn "--- POST-BUILD SECTION START ---"
-    try {
-        # 3. Sanity-check the produced binary. Probe both arches so this works
-        # on x64 and arm64 build machines.
-        Write-Warn "--- TEST-PATH for Hermes.exe ---"
-        $exeCandidates = @(
-            "$desktopDir\release\win-unpacked\Hermes.exe",
-            "$desktopDir\release\win-arm64-unpacked\Hermes.exe"
-        )
-        $found = $false
-        $desktopExe = $null
-        foreach ($cand in $exeCandidates) {
-            if (Test-Path $cand) {
-                Write-Success "Desktop ready: $cand"
-                $desktopExe = $cand
-                $found = $true
-                break
-            }
-        }
-        if (-not $found) {
-            throw "Desktop build completed but no Hermes.exe was found under $desktopDir\release\*-unpacked\"
-        }
-
-        # 3b. The Hermes icon + identity are stamped onto Hermes.exe by the
-        #     electron-builder `afterPack` hook (apps/desktop/scripts/after-pack.cjs)
-        #     during `npm run pack` above  -  for every build, so the installer's
-        #     --update rebuild stays branded too. No separate stamp step needed here.
-        #     electron-builder's own rcedit step stays disabled (signAndEditExecutable
-        #     =false) because enabling it drags in signtool -> winCodeSign -> the
-        #     unfixable symlink crash; the afterPack hook runs rcedit directly.
-
-        # 4. Create Start Menu + Desktop shortcuts pointing DIRECTLY at the packed
-        #    Hermes.exe. We deliberately do NOT point them at `hermes desktop`: that
-        #    command rebuilds (npm install + electron-builder) on every launch,
-        #    which would cost minutes each time. The packed exe is the consumer  - 
-        #    launching it directly is instant, and updates flow through the
-        #    installer's --update path (which rebuilds once, then relaunches).
-        New-DesktopShortcuts -TargetExe $desktopExe
-    } catch {
-        Write-Warn "Desktop post-build verification failed (non-fatal): $_"
-        Write-Info "Hermes.exe was already built successfully  -  you can launch it from:"
-        Write-Info "  $desktopDir\release\win-unpacked\Hermes.exe"
-    }
 }
 
 function New-DesktopShortcuts {
